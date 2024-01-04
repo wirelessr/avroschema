@@ -1,35 +1,62 @@
 package avroschema
 
 import (
-	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 )
 
-type AvroSchema struct {
-	Name      string        `json:"name"`
-	Type      interface{}   `json:"type"`
-	Items     interface{}   `json:"items,omitempty"`
-	Values    interface{}   `json:"values,omitempty"`
-	Fields    []*AvroSchema `json:"fields,omitempty"`
-	Namespace string        `json:"namespace,omitempty"`
-	Doc       string        `json:"doc,omitempty"`
-	Aliases   []string      `json:"aliases,omitempty"`
-	Default   interface{}   `json:"default,omitempty"`
-}
-
-func handleRecord(v any) *AvroSchema {
-	t := reflect.TypeOf(v)
+func reflectType(t reflect.Type) interface{} {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
 
+	switch t.Kind() {
+	case reflect.String:
+		return "string"
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32:
+		return "int"
+	case reflect.Int64, reflect.Uint64:
+		return "long"
+	case reflect.Float32:
+		return "float"
+	case reflect.Float64:
+		return "double"
+	case reflect.Bool:
+		return "boolean"
+	case reflect.Array, reflect.Slice:
+		return handleArray(t)
+	case reflect.Struct:
+		// TODO: handle special types, e.g. time.Time
+		return handleRecord(t)
+	case reflect.Map:
+		if t.Key().Kind() != reflect.String {
+			// If the key is not a string, then treat the whole object as a string.
+			return "string"
+		}
+		return handleMap(t)
+	default:
+		return "" // FIXME: no error handle
+	}
+}
+
+func handleMap(t reflect.Type) *AvroSchema {
+	return &AvroSchema{Type: "map", Values: reflectType(t.Elem())}
+}
+
+func handleArray(t reflect.Type) *AvroSchema {
+	return &AvroSchema{Type: "array", Items: reflectType(t.Elem())}
+}
+
+func handleRecord(t reflect.Type) *AvroSchema {
 	name := t.Name()
 	tokens := strings.Split(name, ".")
 	name = tokens[len(tokens)-1]
 
 	ret := &AvroSchema{Name: name, Type: "record"}
 
+	// reflect.Type: t & f.Type & f.Type.Elem() & f.Type.Key()
 	for i, n := 0, t.NumField(); i < n; i++ { // handle fields
 		f := t.Field(i)
 
@@ -37,33 +64,32 @@ func handleRecord(v any) *AvroSchema {
 		tokens := strings.Split(jsonTag, ",")
 		jsonFieldName := tokens[0]
 
+		if jsonFieldName == "" {
+			continue
+		}
+		fmt.Println(jsonFieldName, f.Type, i, n)
+
 		switch f.Type.Kind() {
-		case reflect.String:
-			ret.Fields = append(ret.Fields, &AvroSchema{Name: jsonFieldName, Type: "string"})
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
-			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32:
-			ret.Fields = append(ret.Fields, &AvroSchema{Name: jsonFieldName, Type: "int"})
-		case reflect.Int64, reflect.Uint64:
-			ret.Fields = append(ret.Fields, &AvroSchema{Name: jsonFieldName, Type: "long"})
-		case reflect.Float32:
-			ret.Fields = append(ret.Fields, &AvroSchema{Name: jsonFieldName, Type: "float"})
-		case reflect.Float64:
-			ret.Fields = append(ret.Fields, &AvroSchema{Name: jsonFieldName, Type: "double"})
-		case reflect.Bool:
-			ret.Fields = append(ret.Fields, &AvroSchema{Name: jsonFieldName, Type: "boolean"})
+		case reflect.Array, reflect.Slice:
+			schema := handleArray(f.Type)
+			schema.Name = jsonFieldName
+			ret.Fields = append(ret.Fields, schema)
 
 		default:
+			ret.Fields = append(ret.Fields, &AvroSchema{Name: jsonFieldName, Type: reflectType(f.Type)})
 		}
 	}
 	return ret
 }
 
 func Reflect(v any) (string, error) {
-	data := handleRecord(v)
+	t := reflect.TypeOf(v)
 
-	jsonBytes, err := json.Marshal(data)
-	if err != nil {
-		return "", err
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
 	}
-	return string(jsonBytes), nil
+
+	data := handleRecord(t)
+
+	return StructToJson(data)
 }
