@@ -30,6 +30,9 @@ func reflectType(t reflect.Type) interface{} {
 		// TODO: handle special types, e.g. time.Time
 		return handleRecord(t)
 	case reflect.Map:
+		if t.Key().Kind() != reflect.String {
+			return "string"
+		}
 		return handleMap(t)
 	default:
 		return "" // FIXME: no error handle
