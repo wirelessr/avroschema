@@ -149,3 +149,76 @@ func TestArrayOfObject(t *testing.T) {
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
 }
+
+func TestMapOfPrimitive(t *testing.T) {
+	type Entity struct {
+		MapStrField map[string]string `json:"a_str_map_field"`
+		MapIntField map[string]int    `json:"a_int_map_field"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "a_str_map_field", "type": "map", "values": "string"},
+      {"name": "a_int_map_field", "type": "map", "values": "int"}
+    ]
+  }`
+
+	e := Entity{}
+
+	r, err := Reflect(e)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
+}
+
+func TestInvalidMap(t *testing.T) {
+	type Entity struct {
+		MapStrField map[int]string `json:"a_invalid_map_field"`
+		MapIntField map[string]int `json:"a_int_map_field"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "a_invalid_map_field", "type": "string"},
+      {"name": "a_int_map_field", "type": "map", "values": "int"}
+    ]
+  }`
+
+	e := Entity{}
+
+	r, err := Reflect(e)
+	fmt.Println(r)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
+}
+
+func TestMapOfArray(t *testing.T) {
+	type Foo struct {
+		Bar string `json:"bar"`
+	}
+	type Entity struct {
+		MapArrayField map[string][]Foo `json:"a_array_map_field"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "a_array_map_field", "type": "map", "values": {
+        "type": "array", "items": {
+					"name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
+				}
+      }}
+    ]
+  }`
+
+	e := Entity{}
+
+	r, err := Reflect(e)
+	fmt.Println(r)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
+}
