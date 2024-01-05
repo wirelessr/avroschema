@@ -31,6 +31,7 @@ func reflectType(t reflect.Type) interface{} {
 		return handleRecord(t)
 	case reflect.Map:
 		if t.Key().Kind() != reflect.String {
+			// If the key is not a string, then treat the whole object as a string.
 			return "string"
 		}
 		return handleMap(t)
@@ -66,26 +67,23 @@ func handleRecord(t reflect.Type) *AvroSchema {
 			continue
 		}
 
-		switch f.Type.Kind() {
-		case reflect.Array, reflect.Slice:
-			schema := handleArray(f.Type)
-			schema.Name = jsonFieldName
-			ret.Fields = append(ret.Fields, schema)
-		case reflect.Map:
-			if f.Type.Key().Kind() != reflect.String {
-				// If the key is not a string, then treat the whole object as a string.
-				ret.Fields = append(ret.Fields, &AvroSchema{Name: jsonFieldName, Type: "string"})
-			} else {
-				schema := handleMap(f.Type)
-				schema.Name = jsonFieldName
-				ret.Fields = append(ret.Fields, schema)
-			}
-
-		default:
-			ret.Fields = append(ret.Fields, &AvroSchema{Name: jsonFieldName, Type: reflectType(f.Type)})
-		}
+		ret.Fields = append(ret.Fields, reflectEx(f.Type, jsonFieldName))
 	}
 	return ret
+}
+
+func reflectEx(t reflect.Type, n string) *AvroSchema {
+	ret := reflectType(t)
+	if reflect.TypeOf(ret).Kind() == reflect.String {
+		return &AvroSchema{Name: n, Type: ret}
+	}
+
+	result, ok := ret.(*AvroSchema)
+	if !ok {
+		return nil
+	}
+	result.Name = n
+	return result
 }
 
 func Reflect(v any) (string, error) {
