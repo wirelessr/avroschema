@@ -80,8 +80,9 @@ func (r *Reflector) handleRecord(t reflect.Type) *AvroSchema {
 		jsonTag := f.Tag.Get("json")
 		tokens := strings.Split(jsonTag, ",")
 		jsonFieldName := tokens[0]
+		bsonTag := f.Tag.Get("bson")
 
-		if jsonFieldName == "" {
+		if jsonFieldName == "" && bsonTag == "" {
 			continue
 		}
 		ret.Fields = append(ret.Fields, r.reflectEx(f.Type, jsonFieldName)...)
