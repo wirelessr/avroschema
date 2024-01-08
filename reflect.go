@@ -12,6 +12,9 @@ type Reflector struct {
 	Mapper func(reflect.Type) interface{}
 }
 
+/*
+Return type is either a string, a *AvroSchema of a slice of *AvroSchema.
+*/
 func (r *Reflector) reflectType(t reflect.Type) interface{} {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -81,8 +84,7 @@ func (r *Reflector) handleRecord(t reflect.Type) *AvroSchema {
 		if jsonFieldName == "" {
 			continue
 		}
-		// TODO: handle plugin types (e.g. mgm.DefaultModel)
-		ret.Fields = append(ret.Fields, r.reflectEx(f.Type, jsonFieldName))
+		ret.Fields = append(ret.Fields, r.reflectEx(f.Type, jsonFieldName)...)
 	}
 	return ret
 }
@@ -92,18 +94,21 @@ Fill in the Name for the AvroSchema.
 If the reflectType is a simple string, generate an AvroSchema and filled in Type.
 But if it is already an AvroSchema, only the Name needs to be filled in.
 */
-func (r *Reflector) reflectEx(t reflect.Type, n string) *AvroSchema {
+func (r *Reflector) reflectEx(t reflect.Type, n string) []*AvroSchema {
 	ret := r.reflectType(t)
 	if reflect.TypeOf(ret).Kind() == reflect.String {
-		return &AvroSchema{Name: n, Type: ret}
+		return []*AvroSchema{{Name: n, Type: ret}}
 	}
 
 	result, ok := ret.(*AvroSchema)
 	if !ok {
+		if slice, ok := ret.([]*AvroSchema); ok {
+			return slice
+		}
 		return nil
 	}
 	result.Name = n
-	return result
+	return []*AvroSchema{result}
 }
 
 func (r *Reflector) ReflectFromType(v any) (string, error) {
