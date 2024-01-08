@@ -3,6 +3,7 @@ package avroschema
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -244,5 +245,26 @@ func TestInvalidMapInMap(t *testing.T) {
 	fmt.Println(r)
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
+}
 
+func TestTimeType(t *testing.T) {
+	type Entity struct {
+		TimeField1 time.Time  `json:"time_field_1"`
+		TimeField2 *time.Time `json:"time_field_2"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "time_field_1", "type": "long", "logicalType": "timestamp-millis"},
+      {"name": "time_field_2", "type": "long", "logicalType": "timestamp-millis"}
+    ]
+  }`
+
+	e := Entity{}
+
+	r, err := Reflect(e)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
 }

@@ -3,7 +3,10 @@ package avroschema
 import (
 	"reflect"
 	"strings"
+	"time"
 )
+
+var timeType = reflect.TypeOf(time.Time{})
 
 func reflectType(t reflect.Type) interface{} {
 	if t.Kind() == reflect.Ptr {
@@ -27,7 +30,10 @@ func reflectType(t reflect.Type) interface{} {
 	case reflect.Array, reflect.Slice:
 		return handleArray(t)
 	case reflect.Struct:
-		// TODO: handle special types, e.g. time.Time
+		// handle special built-in types, e.g. time.Time
+		if t == timeType {
+			return &AvroSchema{Type: "long", LogicalType: "timestamp-millis"}
+		}
 		return handleRecord(t)
 	case reflect.Map:
 		if t.Key().Kind() != reflect.String {
@@ -55,7 +61,6 @@ func handleRecord(t reflect.Type) *AvroSchema {
 
 	ret := &AvroSchema{Name: name, Type: "record"}
 
-	// reflect.Type: t & f.Type & f.Type.Elem() & f.Type.Key()
 	for i, n := 0, t.NumField(); i < n; i++ { // handle fields
 		f := t.Field(i)
 
@@ -66,7 +71,7 @@ func handleRecord(t reflect.Type) *AvroSchema {
 		if jsonFieldName == "" {
 			continue
 		}
-
+		// TODO: handle plugin types (e.g. mgm.DefaultModel)
 		ret.Fields = append(ret.Fields, reflectEx(f.Type, jsonFieldName))
 	}
 	return ret
