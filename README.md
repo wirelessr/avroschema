@@ -21,6 +21,8 @@ type Entity struct {
 Results in following JSON Schema:
 
 ```go
+import "github.com/wirelessr/avroschema"
+
 avroschema.Reflect(&Entity{})
 ```
 
@@ -59,6 +61,11 @@ type Book struct {
 The type mappings can be customized by `Mapper`.
 
 ```go
+import (
+	"github.com/wirelessr/avroschema"
+	"github.com/wirelessr/avroschema/mongo"
+)
+
 reflector := new(avroschema.Reflector)
 reflector.Mapper = MgmExtension
 ```
