@@ -1,6 +1,7 @@
 package avroschema
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -263,4 +264,48 @@ func TestTimeType(t *testing.T) {
 	r, err := Reflect(e)
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
+}
+
+func TestMapperToString(t *testing.T) {
+	type Entity struct {
+		ArrayField []int          `json:"a_int_array_field"`
+		MapField   map[string]int `json:"a_int_map_field"`
+	}
+
+	expected := `{
+		"name": "Entity",
+		"type": "record",
+		"fields": [
+			{"name": "a_int_array_field", "type": "string"},
+			{"name": "a_int_map_field", "type": "string"}
+		]
+	}`
+
+	e := Entity{}
+
+	reflactor := new(Reflector)
+	reflactor.Mapper = func(t reflect.Type) interface{} {
+		return "string"
+	}
+
+	r, err := reflactor.Reflect(e)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
+
+	reflactor.Mapper = func(t reflect.Type) interface{} {
+		return nil
+	}
+
+	expected2 := `{
+		"name": "Entity",
+		"type": "record",
+		"fields": [
+			{"name": "a_int_array_field", "type": "array", "items": "int"},
+			{"name": "a_int_map_field", "type": "map", "values": "int"}
+		]
+	}`
+
+	r2, err2 := reflactor.Reflect(e)
+	assert.JSONEq(t, expected2, r2)
+	assert.Nil(t, err2)
 }

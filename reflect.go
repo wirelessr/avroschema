@@ -8,9 +8,19 @@ import (
 
 var timeType = reflect.TypeOf(time.Time{})
 
-func reflectType(t reflect.Type) interface{} {
+type Reflector struct {
+	Mapper func(reflect.Type) interface{}
+}
+
+func (r *Reflector) reflectType(t reflect.Type) interface{} {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
+	}
+
+	if r.Mapper != nil {
+		if ret := r.Mapper(t); ret != nil {
+			return ret
+		}
 	}
 
 	switch t.Kind() {
@@ -28,33 +38,33 @@ func reflectType(t reflect.Type) interface{} {
 	case reflect.Bool:
 		return "boolean"
 	case reflect.Array, reflect.Slice:
-		return handleArray(t)
+		return r.handleArray(t)
 	case reflect.Struct:
 		// handle special built-in types, e.g. time.Time
 		if t == timeType {
 			return &AvroSchema{Type: "long", LogicalType: "timestamp-millis"}
 		}
-		return handleRecord(t)
+		return r.handleRecord(t)
 	case reflect.Map:
 		if t.Key().Kind() != reflect.String {
 			// If the key is not a string, then treat the whole object as a string.
 			return "string"
 		}
-		return handleMap(t)
+		return r.handleMap(t)
 	default:
 		return "" // FIXME: no error handle
 	}
 }
 
-func handleMap(t reflect.Type) *AvroSchema {
-	return &AvroSchema{Type: "map", Values: reflectType(t.Elem())}
+func (r *Reflector) handleMap(t reflect.Type) *AvroSchema {
+	return &AvroSchema{Type: "map", Values: r.reflectType(t.Elem())}
 }
 
-func handleArray(t reflect.Type) *AvroSchema {
-	return &AvroSchema{Type: "array", Items: reflectType(t.Elem())}
+func (r *Reflector) handleArray(t reflect.Type) *AvroSchema {
+	return &AvroSchema{Type: "array", Items: r.reflectType(t.Elem())}
 }
 
-func handleRecord(t reflect.Type) *AvroSchema {
+func (r *Reflector) handleRecord(t reflect.Type) *AvroSchema {
 	name := t.Name()
 	tokens := strings.Split(name, ".")
 	name = tokens[len(tokens)-1]
@@ -72,7 +82,7 @@ func handleRecord(t reflect.Type) *AvroSchema {
 			continue
 		}
 		// TODO: handle plugin types (e.g. mgm.DefaultModel)
-		ret.Fields = append(ret.Fields, reflectEx(f.Type, jsonFieldName))
+		ret.Fields = append(ret.Fields, r.reflectEx(f.Type, jsonFieldName))
 	}
 	return ret
 }
@@ -82,8 +92,8 @@ Fill in the Name for the AvroSchema.
 If the reflectType is a simple string, generate an AvroSchema and filled in Type.
 But if it is already an AvroSchema, only the Name needs to be filled in.
 */
-func reflectEx(t reflect.Type, n string) *AvroSchema {
-	ret := reflectType(t)
+func (r *Reflector) reflectEx(t reflect.Type, n string) *AvroSchema {
+	ret := r.reflectType(t)
 	if reflect.TypeOf(ret).Kind() == reflect.String {
 		return &AvroSchema{Name: n, Type: ret}
 	}
@@ -96,14 +106,27 @@ func reflectEx(t reflect.Type, n string) *AvroSchema {
 	return result
 }
 
-func Reflect(v any) (string, error) {
+func (r *Reflector) ReflectFromType(v any) (string, error) {
 	t := reflect.TypeOf(v)
 
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
 
-	data := handleRecord(t)
+	data := r.handleRecord(t)
 
 	return StructToJson(data)
+}
+
+/*
+For customizing mapper, etc.
+*/
+func (r *Reflector) Reflect(v any) (string, error) {
+	return r.ReflectFromType(v)
+}
+
+func Reflect(v any) (string, error) {
+	r := &Reflector{}
+
+	return r.ReflectFromType(v)
 }
