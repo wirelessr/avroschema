@@ -77,6 +77,11 @@ func handleRecord(t reflect.Type) *AvroSchema {
 	return ret
 }
 
+/*
+Fill in the Name for the AvroSchema.
+If the reflectType is a simple string, generate an AvroSchema and filled in Type.
+But if it is already an AvroSchema, only the Name needs to be filled in.
+*/
 func reflectEx(t reflect.Type, n string) *AvroSchema {
 	ret := reflectType(t)
 	if reflect.TypeOf(ret).Kind() == reflect.String {

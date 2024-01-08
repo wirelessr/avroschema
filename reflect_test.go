@@ -1,7 +1,6 @@
 package avroschema
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -146,7 +145,6 @@ func TestArrayOfObject(t *testing.T) {
 
 	r, err := Reflect(e)
 
-	fmt.Println(r)
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
 }
@@ -191,7 +189,6 @@ func TestInvalidMap(t *testing.T) {
 	e := Entity{}
 
 	r, err := Reflect(e)
-	fmt.Println(r)
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
 }
@@ -242,7 +239,6 @@ func TestInvalidMapInMap(t *testing.T) {
 	e := Entity{}
 
 	r, err := Reflect(e)
-	fmt.Println(r)
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
 }
