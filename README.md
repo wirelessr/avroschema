@@ -68,6 +68,8 @@ import (
 
 reflector := new(avroschema.Reflector)
 reflector.Mapper = MgmExtension
+
+reflector.Reflect(&Book{})
 ```
 
 Results in following JSON Schema:
