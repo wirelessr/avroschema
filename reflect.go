@@ -9,7 +9,8 @@ import (
 var timeType = reflect.TypeOf(time.Time{})
 
 type Reflector struct {
-	Mapper func(reflect.Type) interface{}
+	BeBackwardTransitive bool
+	Mapper               func(reflect.Type) interface{}
 }
 
 /*
@@ -78,14 +79,13 @@ func (r *Reflector) handleRecord(t reflect.Type) *AvroSchema {
 		f := t.Field(i)
 
 		jsonTag := f.Tag.Get("json")
-		tokens := strings.Split(jsonTag, ",")
-		jsonFieldName := tokens[0]
+		jsonFieldName, isOptional := GetNameAndOmit(jsonTag)
 		bsonTag := f.Tag.Get("bson")
 
 		if jsonFieldName == "" && bsonTag == "" {
 			continue
 		}
-		ret.Fields = append(ret.Fields, r.reflectEx(f.Type, jsonFieldName)...)
+		ret.Fields = append(ret.Fields, r.reflectEx(f.Type, isOptional, jsonFieldName)...)
 	}
 	return ret
 }
@@ -95,18 +95,31 @@ Fill in the Name for the AvroSchema.
 If the reflectType is a simple string, generate an AvroSchema and filled in Type.
 But if it is already an AvroSchema, only the Name needs to be filled in.
 */
-func (r *Reflector) reflectEx(t reflect.Type, n string) []*AvroSchema {
+func (r *Reflector) reflectEx(t reflect.Type, isOpt bool, n string) []*AvroSchema {
+	isOpt = isOpt || r.BeBackwardTransitive
+
 	ret := r.reflectType(t)
+	// primitive type
 	if reflect.TypeOf(ret).Kind() == reflect.String {
+		if isOpt {
+			result := &AvroSchema{Name: n, Type: []interface{}{"null", ret}}
+			return []*AvroSchema{result}
+		}
 		return []*AvroSchema{{Name: n, Type: ret}}
 	}
 
 	result, ok := ret.(*AvroSchema)
+	// made by extension, i.e., a slice
 	if !ok {
 		if slice, ok := ret.([]*AvroSchema); ok {
 			return slice
 		}
 		return nil
+	}
+
+	// the rest is single schema
+	if isOpt {
+		result = &AvroSchema{Name: n, Type: []interface{}{"null", result}}
 	}
 	result.Name = n
 	return []*AvroSchema{result}

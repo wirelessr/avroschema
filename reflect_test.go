@@ -309,3 +309,70 @@ func TestMapperToString(t *testing.T) {
 	assert.JSONEq(t, expected2, r2)
 	assert.Nil(t, err2)
 }
+
+func TestUnionPrimitiveType(t *testing.T) {
+	type Entity struct {
+		UnionField int `json:"union_field,omitempty"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "union_field", "type": ["null", "int"]}
+    ]
+  }`
+
+	e := Entity{}
+
+	r, err := Reflect(e)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
+}
+
+func TestUnionRecordType(t *testing.T) {
+	type Foo struct {
+		Bar string `json:"bar"`
+	}
+	type Entity struct {
+		UnionField Foo `json:"union_field,omitempty"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "union_field", "type": ["null", {
+        "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
+      }]}
+    ]
+  }`
+
+	e := Entity{}
+
+	r, err := Reflect(e)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
+}
+
+func TestUnionArrayType(t *testing.T) {
+	type Entity struct {
+		UnionArrayField []int `json:"union_array_field,omitempty"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "union_array_field", "type": ["null", {
+        "type": "array", "items": "int"
+      }]}
+    ]
+  }`
+
+	e := Entity{}
+
+	r, err := Reflect(e)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
+}
