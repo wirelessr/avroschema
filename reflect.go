@@ -99,15 +99,15 @@ If the reflectType is a simple string, generate an AvroSchema and filled in Type
 But if it is already an AvroSchema, only the Name needs to be filled in.
 */
 func (r *Reflector) reflectEx(t reflect.Type, isOpt bool, n string) []*AvroSchema {
-	isOpt = isOpt || r.BeBackwardTransitive
-
 	ret := r.reflectType(t)
+
+	// optional field
+	if isOpt || r.BeBackwardTransitive {
+		return []*AvroSchema{{Name: n, Type: []interface{}{"null", ret}}}
+	}
+
 	// primitive type
 	if reflect.TypeOf(ret).Kind() == reflect.String {
-		if isOpt {
-			result := &AvroSchema{Name: n, Type: []interface{}{"null", ret}}
-			return []*AvroSchema{result}
-		}
 		return []*AvroSchema{{Name: n, Type: ret}}
 	}
 
@@ -121,9 +121,6 @@ func (r *Reflector) reflectEx(t reflect.Type, isOpt bool, n string) []*AvroSchem
 	}
 
 	// the rest is single schema
-	if isOpt {
-		result = &AvroSchema{Name: n, Type: []interface{}{"null", result}}
-	}
 	result.Name = n
 	return []*AvroSchema{result}
 }
