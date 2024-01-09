@@ -376,3 +376,35 @@ func TestUnionArrayType(t *testing.T) {
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
 }
+
+func TestBackwardTransitive(t *testing.T) {
+	type Entity struct {
+		AStrField    string  `json:"a_str_field"`
+		AIntField    int     `json:"a_int_field"`
+		ABoolField   bool    `json:"a_bool_field"`
+		AFloatField  float32 `json:"a_float_field"`
+		ADoubleField float64 `json:"a_double_field"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "a_str_field", "type": ["null", "string"]},
+      {"name": "a_int_field", "type": ["null", "int"]},
+      {"name": "a_bool_field", "type": ["null", "boolean"]},
+      {"name": "a_float_field", "type": ["null", "float"]},
+      {"name": "a_double_field", "type": ["null", "double"]}
+    ]
+  }`
+
+	e := Entity{}
+
+	// assign flag
+	reflector := new(Reflector)
+	reflector.BeBackwardTransitive = true
+
+	r, err := reflector.Reflect(e)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
+}

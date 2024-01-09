@@ -9,6 +9,9 @@ import (
 var timeType = reflect.TypeOf(time.Time{})
 
 type Reflector struct {
+	/*
+	   Make all fields of Record be backward transitive, i.e., all fields are optional.
+	*/
 	BeBackwardTransitive bool
 	Mapper               func(reflect.Type) interface{}
 }
@@ -114,7 +117,7 @@ func (r *Reflector) reflectEx(t reflect.Type, isOpt bool, n string) []*AvroSchem
 		if slice, ok := ret.([]*AvroSchema); ok {
 			return slice
 		}
-		return nil
+		return nil // FIXME: no error handle
 	}
 
 	// the rest is single schema
