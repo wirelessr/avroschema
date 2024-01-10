@@ -1,6 +1,7 @@
 # Avro Schema
 
 ![workflow](https://github.com/wirelessr/avroschema/actions/workflows/go.yml/badge.svg)
+![Lint](https://github.com/wirelessr/avroschema/actions/workflows/lint.yml/badge.svg)
 
 This package can be used to generate [Avro Schemas](https://avro.apache.org/docs/1.11.1/specification/) from Go types through reflection.
 
