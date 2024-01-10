@@ -59,7 +59,7 @@ func (r *Reflector) reflectType(t reflect.Type) interface{} {
 		}
 		return r.handleMap(t)
 	default:
-		return "" // FIXME: no error handle
+		return "string" // interface{}
 	}
 }
 

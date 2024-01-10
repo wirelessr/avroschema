@@ -408,3 +408,24 @@ func TestBackwardTransitive(t *testing.T) {
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
 }
+
+func TestInterfaceOfMap(t *testing.T) {
+	type Entity struct {
+		AMapInterfaceField map[string]interface{} `json:"a_map_interface_field"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "a_map_interface_field", "type": "map", "values": "string"}
+    ]
+  }`
+
+	e := Entity{}
+
+	r, err := Reflect(e)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
+
+}
