@@ -13,13 +13,13 @@ type Reflector struct {
 	   Make all fields of Record be backward transitive, i.e., all fields are optional.
 	*/
 	BeBackwardTransitive bool
-	Mapper               func(reflect.Type) interface{}
+	Mapper               func(reflect.Type) any
 }
 
 /*
 Return type is either a string, a *AvroSchema of a slice of *AvroSchema.
 */
-func (r *Reflector) reflectType(t reflect.Type) interface{} {
+func (r *Reflector) reflectType(t reflect.Type) any {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
@@ -59,7 +59,7 @@ func (r *Reflector) reflectType(t reflect.Type) interface{} {
 		}
 		return r.handleMap(t)
 	default:
-		return "string" // interface{}
+		return "string" // any
 	}
 }
 
@@ -103,7 +103,7 @@ func (r *Reflector) reflectEx(t reflect.Type, isOpt bool, n string) []*AvroSchem
 
 	// optional field
 	if isOpt || r.BeBackwardTransitive {
-		return []*AvroSchema{{Name: n, Type: []interface{}{"null", ret}}}
+		return []*AvroSchema{{Name: n, Type: []any{"null", ret}}}
 	}
 
 	// primitive type

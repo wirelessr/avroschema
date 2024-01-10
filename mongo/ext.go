@@ -6,7 +6,7 @@ import (
 	"github.com/wirelessr/avroschema"
 )
 
-func MgmExtension(t reflect.Type) interface{} {
+func MgmExtension(t reflect.Type) any {
 	switch t.Name() {
 	case "DateTime": // primitive.DateTime
 		return &avroschema.AvroSchema{Type: "long", LogicalType: "timestamp-millis"}

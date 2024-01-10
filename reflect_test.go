@@ -284,7 +284,7 @@ func TestMapperToString(t *testing.T) {
 	e := Entity{}
 
 	reflactor := new(Reflector)
-	reflactor.Mapper = func(t reflect.Type) interface{} {
+	reflactor.Mapper = func(t reflect.Type) any {
 		return "string"
 	}
 
@@ -292,7 +292,7 @@ func TestMapperToString(t *testing.T) {
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
 
-	reflactor.Mapper = func(t reflect.Type) interface{} {
+	reflactor.Mapper = func(t reflect.Type) any {
 		return nil
 	}
 
@@ -411,7 +411,7 @@ func TestBackwardTransitive(t *testing.T) {
 
 func TestInterfaceOfMap(t *testing.T) {
 	type Entity struct {
-		AMapInterfaceField map[string]interface{} `json:"a_map_interface_field"`
+		AMapInterfaceField map[string]any `json:"a_map_interface_field"`
 	}
 
 	expected := `{

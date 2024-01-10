@@ -1,0 +1,44 @@
+run:
+  tests: true
+
+output:
+  print-issued-lines: false
+
+linters:
+  enable:
+    - gocyclo
+    - gocritic
+    - goconst
+    - dupl
+    - unconvert
+    - goimports
+    - unused
+    - vetshadow
+    - nakedret
+    - errcheck
+    - ineffassign
+    - goconst
+    - vet
+    - unparam
+    - gofmt
+
+linters-settings:
+  vet:
+    check-shadowing: true
+    use-installed-packages: true
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 8
+    min-occurrences: 3
+  gocyclo:
+    min-complexity: 20
+  gocritic:
+    disabled-checks:
+      - ifElseChain
+  gofmt:
+    rewrite-rules:
+    - pattern:     'any'
+      replacement: 'any'
+    - pattern:     'a[b:len(a)]'
+      replacement: 'a[b:]'
