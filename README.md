@@ -1,8 +1,8 @@
-# Avro Schema
+# Go Avro Schema Reflection
 
-![workflow](https://github.com/wirelessr/avroschema/actions/workflows/go.yml/badge.svg)
-![Lint](https://github.com/wirelessr/avroschema/actions/workflows/lint.yml/badge.svg)
-![Go Report](https://goreportcard.com/badge/github.com/wirelessr/avroschema)
+[![workflow](https://github.com/wirelessr/avroschema/actions/workflows/go.yml/badge.svg)](https://github.com/wirelessr/avroschema/actions/workflows/go.yml)
+[![Lint](https://github.com/wirelessr/avroschema/actions/workflows/lint.yml/badge.svg)](https://github.com/wirelessr/avroschema/actions/workflows/lint.yml)
+[![Go Report](https://goreportcard.com/badge/github.com/wirelessr/avroschema)](https://goreportcard.com/report/github.com/wirelessr/avroschema)
 
 This package can be used to generate [Avro Schemas](https://avro.apache.org/docs/1.11.1/specification/) from Go types through reflection.
 
