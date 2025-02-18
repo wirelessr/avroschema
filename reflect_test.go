@@ -86,8 +86,8 @@ func TestArrayOfPrimitive(t *testing.T) {
     "name": "Entity",
     "type": "record",
     "fields": [
-      {"name": "a_str_array_field", "type": "array", "items": "string"},
-      {"name": "a_int_array_field", "type": "array", "items": "int"}
+      {"name": "a_str_array_field", "type": {"type": "array", "items": "string"}},
+      {"name": "a_int_array_field", "type": {"type": "array", "items": "int"}}
     ]
   }`
 
@@ -108,8 +108,8 @@ func TestArrayOfPrimitivePointer(t *testing.T) {
     "name": "Entity",
     "type": "record",
     "fields": [
-      {"name": "a_str_array_field", "type": "array", "items": "string"},
-      {"name": "a_int_array_field", "type": "array", "items": "int"}
+      {"name": "a_str_array_field", "type": {"type": "array", "items": "string"}},
+      {"name": "a_int_array_field", "type": {"type": "array", "items": "int"}}
     ]
   }`
 
@@ -133,12 +133,16 @@ func TestArrayOfObject(t *testing.T) {
     "name": "Entity",
     "type": "record",
     "fields": [
-      {"name": "a_obj_array_field", "type": "array", "items": {
-        "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
-      }},
-      {"name": "a_obj_ptr_array_field", "type": "array", "items": {
-        "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
-      }}
+      {"name": "a_obj_array_field", "type": {
+	    "type": "array", "items": {
+          "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
+        }
+	  }},
+      {"name": "a_obj_ptr_array_field", "type": {
+	    "type": "array", "items": {
+          "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
+        }
+	  }}
     ]
   }`
 
@@ -160,8 +164,8 @@ func TestMapOfPrimitive(t *testing.T) {
     "name": "Entity",
     "type": "record",
     "fields": [
-      {"name": "a_str_map_field", "type": "map", "values": "string"},
-      {"name": "a_int_map_field", "type": "map", "values": "int"}
+      {"name": "a_str_map_field", "type": {"type":"map", "values": "string"}},
+      {"name": "a_int_map_field", "type": {"type":"map", "values": "int"}}
     ]
   }`
 
@@ -183,7 +187,7 @@ func TestInvalidMap(t *testing.T) {
     "type": "record",
     "fields": [
       {"name": "a_invalid_map_field", "type": "string"},
-      {"name": "a_int_map_field", "type": "map", "values": "int"}
+      {"name": "a_int_map_field", "type": {"type":"map", "values": "int"}}
     ]
   }`
 
@@ -206,11 +210,11 @@ func TestMapOfArray(t *testing.T) {
     "name": "Entity",
     "type": "record",
     "fields": [
-      {"name": "a_array_map_field", "type": "map", "values": {
+      {"name": "a_array_map_field", "type": {"type":"map", "values": {
         "type": "array", "items": {
 					"name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
 				}
-      }}
+      }}}
     ]
   }`
 
@@ -233,7 +237,7 @@ func TestInvalidMapInMap(t *testing.T) {
     "name": "Entity",
     "type": "record",
     "fields": [
-      {"name": "a_array_map_field", "type": "map", "values": "string"}
+      {"name": "a_array_map_field", "type": {"type":"map", "values": "string"}}
     ]
   }`
 
@@ -244,6 +248,7 @@ func TestInvalidMapInMap(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+// shouldn't the pointer field be marked optional?
 func TestTimeType(t *testing.T) {
 	type Entity struct {
 		TimeField1 time.Time  `json:"time_field_1"`
@@ -300,8 +305,8 @@ func TestMapperToString(t *testing.T) {
 		"name": "Entity",
 		"type": "record",
 		"fields": [
-			{"name": "a_int_array_field", "type": "array", "items": "int"},
-			{"name": "a_int_map_field", "type": "map", "values": "int"}
+			{"name": "a_int_array_field", "type": {"type":"array", "items": "int"}},
+			{"name": "a_int_map_field", "type": {"type":"map", "values": "int"}}
 		]
 	}`
 
@@ -418,7 +423,7 @@ func TestInterfaceOfMap(t *testing.T) {
     "name": "Entity",
     "type": "record",
     "fields": [
-      {"name": "a_map_interface_field", "type": "map", "values": "string"}
+      {"name": "a_map_interface_field", "type": {"type":"map", "values": "string"}}
     ]
   }`
 
@@ -428,4 +433,69 @@ func TestInterfaceOfMap(t *testing.T) {
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
 
+}
+
+func TestInlineRecordType(t *testing.T) {
+	type Foo struct {
+		Bar string `json:"bar"`
+	}
+	type Entity struct {
+		Foo         `json:",inline"`
+		Embedded    Foo  `json:"embedded"`
+		EmbeddedOpt *Foo `json:"embedded_opt,omitempty"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+	  {"name": "bar", "type": "string"},
+	  {"name": "embedded", "type":
+	    {
+          "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
+        }
+      },
+	  {"name": "embedded_opt", "type":
+	    [
+		  "null",
+	      {
+            "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
+          }
+		]
+      }
+    ]
+  }`
+
+	e := Entity{}
+
+	r, err := Reflect(e)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
+}
+
+func TestNestedRecordType(t *testing.T) {
+	type Foo struct {
+		Bar string `json:"bar"`
+	}
+	type Entity struct {
+		EmbeddedField Foo `json:"embedded_field"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "embedded_field", "type":
+	    {
+          "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
+        }
+      }
+    ]
+  }`
+
+	e := Entity{}
+
+	r, err := Reflect(e)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
 }

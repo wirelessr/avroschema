@@ -124,6 +124,12 @@ func (r *Reflector) reflectEx(t reflect.Type, isOpt bool, n string) []*AvroSchem
 		return nil // FIXME: no error handle
 	}
 
+	// If its one of these complex types then name this separately and embed the type as its own schema
+	// unions are already handled explicitly above, fixed and enums not yet supported.
+	if !isOpt && (result.Type == "record" || result.Type == "map" || result.Type == "array") {
+		return []*AvroSchema{{Name: n, Type: ret}}
+	}
+
 	// the rest is single schema
 	result.Name = n
 	return []*AvroSchema{result}
