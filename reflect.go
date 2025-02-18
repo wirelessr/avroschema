@@ -82,8 +82,12 @@ func (r *Reflector) handleRecord(t reflect.Type) *AvroSchema {
 		f := t.Field(i)
 
 		jsonTag := f.Tag.Get("json")
-		jsonFieldName, isOptional := GetNameAndOmit(jsonTag)
+		jsonFieldName, isOptional, isInline := GetNameAndOmit(jsonTag)
 		bsonTag := f.Tag.Get("bson")
+		// for inline structs go and pull the fields and append to this record
+		if isInline {
+			ret.Fields = append(ret.Fields, r.handleRecord(f.Type).Fields...)
+		}
 
 		if jsonFieldName == "" && bsonTag == "" {
 			continue

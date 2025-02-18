@@ -7,13 +7,32 @@ import (
 )
 
 func TestGetNameAndOmit(t *testing.T) {
-	s1 := "abcd"
-	n1, opt1 := GetNameAndOmit(s1)
-	assert.Equal(t, "abcd", n1)
-	assert.False(t, opt1)
+	var tdata = []struct {
+		input    string
+		name     string
+		optional bool
+		inline   bool
+	}{
+		{
+			"abcd", "abcd", false, false,
+		},
+		{
+			"abcd,omitempty", "abcd", true, false,
+		},
+		{
+			"abcd,inline", "abcd", false, true,
+		},
+		{
+			"abcd,inline,omitempty", "abcd", true, true,
+		},
+	}
 
-	s2 := "abcd,omitempty"
-	n2, opt2 := GetNameAndOmit(s2)
-	assert.Equal(t, "abcd", n2)
-	assert.True(t, opt2)
+	for _, tt := range tdata {
+		t.Run(tt.input, func(t *testing.T) {
+			name, opt, inline := GetNameAndOmit(tt.input)
+			assert.Equal(t, tt.name, name)
+			assert.Equal(t, tt.optional, opt)
+			assert.Equal(t, tt.inline, inline)
+		})
+	}
 }

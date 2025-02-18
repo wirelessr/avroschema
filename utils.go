@@ -2,14 +2,20 @@ package avroschema
 
 import "strings"
 
-func GetNameAndOmit(jsonTag string) (string, bool) {
+func GetNameAndOmit(jsonTag string) (string, bool, bool) {
 	tags := strings.Split(jsonTag, ",")
 	name := tags[0]
+	optional := false
+	inline := false
 
 	for _, tag := range tags {
-		if tag == "omitempty" {
-			return name, true
+		switch tag {
+		case "omitempty":
+			optional = true
+
+		case "inline":
+			inline = true
 		}
 	}
-	return name, false
+	return name, optional, inline
 }
