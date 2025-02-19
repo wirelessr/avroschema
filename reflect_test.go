@@ -140,7 +140,7 @@ func TestArrayOfObject(t *testing.T) {
 	  }},
       {"name": "a_obj_ptr_array_field", "type": {
 	    "type": "array", "items": {
-          "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
+          "name": "Foo", "type": "Foo"
         }
 	  }}
     ]
@@ -459,7 +459,7 @@ func TestInlineRecordType(t *testing.T) {
 	    [
 		  "null",
 	      {
-            "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
+            "name": "Foo", "type": "Foo"
           }
 		]
       }
@@ -496,6 +496,34 @@ func TestNestedRecordType(t *testing.T) {
 	e := Entity{}
 
 	r, err := Reflect(e)
+	assert.JSONEq(t, expected, r)
+	assert.Nil(t, err)
+}
+
+func TestDuplicateObject(t *testing.T) {
+	type Foo struct {
+		Bar string `json:"bar"`
+	}
+	type Entity struct {
+		OneFoo     Foo `json:"one_foo"`
+		AnotherFoo Foo `json:"another_foo"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "one_foo", "type": {
+        "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
+	  }},
+      {"name": "another_foo", "type": "Foo"}
+    ]
+  }`
+
+	e := Entity{}
+
+	r, err := Reflect(e)
+
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
 }

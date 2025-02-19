@@ -14,6 +14,7 @@ type Reflector struct {
 	*/
 	BeBackwardTransitive bool
 	Mapper               func(reflect.Type) any
+	recordTypeCache      map[string]reflect.Type
 }
 
 /*
@@ -51,7 +52,10 @@ func (r *Reflector) reflectType(t reflect.Type) any {
 		if t == timeType {
 			return &AvroSchema{Type: "long", LogicalType: "timestamp-millis"}
 		}
-		return r.handleRecord(t)
+		rec := r.handleRecord(t)
+		// cache record result for future references
+		r.recordTypeCache[t.Name()] = t
+		return rec
 	case reflect.Map:
 		if t.Key().Kind() != reflect.String {
 			// If the key is not a string, then treat the whole object as a string.
@@ -75,6 +79,10 @@ func (r *Reflector) handleRecord(t reflect.Type) *AvroSchema {
 	name := t.Name()
 	tokens := strings.Split(name, ".")
 	name = tokens[len(tokens)-1]
+
+	if _, ok := r.recordTypeCache[t.Name()]; ok {
+		return &AvroSchema{Name: name, Type: t.Name()}
+	}
 
 	ret := &AvroSchema{Name: name, Type: "record"}
 
@@ -136,6 +144,9 @@ func (r *Reflector) reflectEx(t reflect.Type, isOpt bool, n string) []*AvroSchem
 }
 
 func (r *Reflector) ReflectFromType(v any) (string, error) {
+	// currently everything flows through here so (re)init record cache
+	r.recordTypeCache = make(map[string]reflect.Type)
+
 	t := reflect.TypeOf(v)
 
 	if t.Kind() == reflect.Ptr {
