@@ -29,10 +29,10 @@ func TestGetNameAndOmit(t *testing.T) {
 
 	for _, tt := range tdata {
 		t.Run(tt.input, func(t *testing.T) {
-			name, opt, inline := GetNameAndOmit(tt.input)
-			assert.Equal(t, tt.name, name)
-			assert.Equal(t, tt.optional, opt)
-			assert.Equal(t, tt.inline, inline)
+			tag := parseStructTag(tt.input)
+			assert.Equal(t, tt.name, tag.Name)
+			assert.Equal(t, tt.optional, tag.Optional)
+			assert.Equal(t, tt.inline, tag.Inline)
 		})
 	}
 }

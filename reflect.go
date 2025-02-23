@@ -13,6 +13,8 @@ type Reflector struct {
 	   Make all fields of Record be backward transitive, i.e., all fields are optional.
 	*/
 	BeBackwardTransitive bool
+	EmitAllFields        bool // don't skip struct fields which have no struct tags
+	SkipTagFieldNames    bool // don't use json/bson tag names, even if theyre present
 	Mapper               func(reflect.Type) any
 	recordTypeCache      map[string]reflect.Type
 }
@@ -90,17 +92,33 @@ func (r *Reflector) handleRecord(t reflect.Type) *AvroSchema {
 		f := t.Field(i)
 
 		jsonTag := f.Tag.Get("json")
-		jsonFieldName, isOptional, isInline := GetNameAndOmit(jsonTag)
+		jStructTag := parseStructTag(jsonTag)
 		bsonTag := f.Tag.Get("bson")
+		bStructTag := parseStructTag(bsonTag)
 		// for inline structs go and pull the fields and append to this record
-		if isInline {
+		if jStructTag.Inline || bStructTag.Inline {
 			ret.Fields = append(ret.Fields, r.handleRecord(f.Type).Fields...)
-		}
-
-		if jsonFieldName == "" && bsonTag == "" {
 			continue
 		}
-		ret.Fields = append(ret.Fields, r.reflectEx(f.Type, isOptional, jsonFieldName)...)
+
+		// unless emitting all fields, ignore fields with no json/bson tag names
+		if !r.EmitAllFields && jStructTag.Name == "" && bStructTag.Name == "" {
+			continue
+		}
+		fieldName := f.Name
+		if !r.SkipTagFieldNames {
+			// prefer bson tag name in attempt at more compatability with this MgmExtension thing, the mapper for which mimics the bson naming
+			if bStructTag.Name != "" {
+				fieldName = bStructTag.Name
+			} else if jStructTag.Name != "" {
+				fieldName = jStructTag.Name
+			}
+			// otherwise must be emitting all fields and so no other choice than to take the go name
+		}
+		// This is likely a backwards compatilbity break with whatever the mgm stuff is, as ObjectID is marked optional in bson, not in json.
+		// previously bson's optional was never considered here.
+		isOptional := jStructTag.Optional || bStructTag.Optional
+		ret.Fields = append(ret.Fields, r.reflectEx(f.Type, isOptional, fieldName)...)
 	}
 	return ret
 }

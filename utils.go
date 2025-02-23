@@ -2,8 +2,14 @@ package avroschema
 
 import "strings"
 
-func GetNameAndOmit(jsonTag string) (string, bool, bool) {
-	tags := strings.Split(jsonTag, ",")
+type structTag struct {
+	Name     string
+	Optional bool
+	Inline   bool
+}
+
+func parseStructTag(tag string) *structTag {
+	tags := strings.Split(tag, ",")
 	name := tags[0]
 	optional := false
 	inline := false
@@ -17,5 +23,5 @@ func GetNameAndOmit(jsonTag string) (string, bool, bool) {
 			inline = true
 		}
 	}
-	return name, optional, inline
+	return &structTag{name, optional, inline}
 }

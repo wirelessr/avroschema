@@ -527,3 +527,94 @@ func TestDuplicateObject(t *testing.T) {
 	assert.JSONEq(t, expected, r)
 	assert.Nil(t, err)
 }
+
+func TestGoFieldNaming(t *testing.T) {
+	type Foo struct {
+		Bar string `json:"bar"`
+	}
+	type Entity struct {
+		OneFoo     Foo `json:"one_foo"`
+		AnotherFoo Foo `json:"another_foo"`
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "OneFoo", "type": {
+        "name": "Foo", "type": "record", "fields": [{"name": "Bar", "type": "string"}]
+	  }},
+      {"name": "AnotherFoo", "type": "Foo"}
+    ]
+  }`
+
+	e := Entity{}
+
+	ref := &Reflector{
+		SkipTagFieldNames: true,
+	}
+	r, err := ref.ReflectFromType(e)
+	assert.Nil(t, err)
+	assert.JSONEq(t, expected, r)
+}
+
+func TestGoEmitAllFields(t *testing.T) {
+	type Foo struct {
+		Bar string `json:"bar"`
+	}
+	type Entity struct {
+		OneFoo     Foo `json:"one_foo"`
+		AnotherFoo Foo
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "one_foo", "type": {
+        "name": "Foo", "type": "record", "fields": [{"name": "bar", "type": "string"}]
+	  }},
+      {"name": "AnotherFoo", "type": "Foo"}
+    ]
+  }`
+
+	e := Entity{}
+
+	ref := &Reflector{
+		EmitAllFields: true,
+	}
+	r, err := ref.ReflectFromType(e)
+	assert.Nil(t, err)
+	assert.JSONEq(t, expected, r)
+}
+
+func TestGoEmitAllFieldsGoNaming(t *testing.T) {
+	type Foo struct {
+		Bar string `json:"bar"`
+	}
+	type Entity struct {
+		OneFoo     Foo `json:"one_foo"`
+		AnotherFoo Foo
+	}
+
+	expected := `{
+    "name": "Entity",
+    "type": "record",
+    "fields": [
+      {"name": "OneFoo", "type": {
+        "name": "Foo", "type": "record", "fields": [{"name": "Bar", "type": "string"}]
+	  }},
+      {"name": "AnotherFoo", "type": "Foo"}
+    ]
+  }`
+
+	e := Entity{}
+
+	ref := &Reflector{
+		EmitAllFields:     true,
+		SkipTagFieldNames: true,
+	}
+	r, err := ref.ReflectFromType(e)
+	assert.Nil(t, err)
+	assert.JSONEq(t, expected, r)
+}
