@@ -13,7 +13,10 @@ type Reflector struct {
 	   Make all fields of Record be backward transitive, i.e., all fields are optional.
 	*/
 	BeBackwardTransitive bool
+	EmitAllFields        bool // don't skip struct fields which have no struct tags
+	SkipTagFieldNames    bool // don't use json/bson tag names, even if theyre present
 	Mapper               func(reflect.Type) any
+	recordTypeCache      map[string]reflect.Type
 }
 
 /*
@@ -51,7 +54,10 @@ func (r *Reflector) reflectType(t reflect.Type) any {
 		if t == timeType {
 			return &AvroSchema{Type: "long", LogicalType: "timestamp-millis"}
 		}
-		return r.handleRecord(t)
+		rec := r.handleRecord(t)
+		// cache record result for future references
+		r.recordTypeCache[t.Name()] = t
+		return rec
 	case reflect.Map:
 		if t.Key().Kind() != reflect.String {
 			// If the key is not a string, then treat the whole object as a string.
@@ -76,19 +82,43 @@ func (r *Reflector) handleRecord(t reflect.Type) *AvroSchema {
 	tokens := strings.Split(name, ".")
 	name = tokens[len(tokens)-1]
 
+	if _, ok := r.recordTypeCache[t.Name()]; ok {
+		return &AvroSchema{Name: name, Type: t.Name()}
+	}
+
 	ret := &AvroSchema{Name: name, Type: "record"}
 
 	for i, n := 0, t.NumField(); i < n; i++ { // handle fields
 		f := t.Field(i)
 
 		jsonTag := f.Tag.Get("json")
-		jsonFieldName, isOptional := GetNameAndOmit(jsonTag)
+		jStructTag := parseStructTag(jsonTag)
 		bsonTag := f.Tag.Get("bson")
-
-		if jsonFieldName == "" && bsonTag == "" {
+		bStructTag := parseStructTag(bsonTag)
+		// for inline structs go and pull the fields and append to this record
+		if jStructTag.Inline || bStructTag.Inline {
+			ret.Fields = append(ret.Fields, r.handleRecord(f.Type).Fields...)
 			continue
 		}
-		ret.Fields = append(ret.Fields, r.reflectEx(f.Type, isOptional, jsonFieldName)...)
+
+		// unless emitting all fields, ignore fields with no json/bson tag names
+		if !r.EmitAllFields && jStructTag.Name == "" && bStructTag.Name == "" {
+			continue
+		}
+		fieldName := f.Name
+		if !r.SkipTagFieldNames {
+			// prefer bson tag name in attempt at more compatability with this MgmExtension thing, the mapper for which mimics the bson naming
+			if bStructTag.Name != "" {
+				fieldName = bStructTag.Name
+			} else if jStructTag.Name != "" {
+				fieldName = jStructTag.Name
+			}
+			// otherwise must be emitting all fields and so no other choice than to take the go name
+		}
+		// This is likely a backwards compatilbity break with whatever the mgm stuff is, as ObjectID is marked optional in bson, not in json.
+		// previously bson's optional was never considered here.
+		isOptional := jStructTag.Optional || bStructTag.Optional
+		ret.Fields = append(ret.Fields, r.reflectEx(f.Type, isOptional, fieldName)...)
 	}
 	return ret
 }
@@ -120,12 +150,21 @@ func (r *Reflector) reflectEx(t reflect.Type, isOpt bool, n string) []*AvroSchem
 		return nil // FIXME: no error handle
 	}
 
+	// If its one of these complex types then name this separately and embed the type as its own schema
+	// unions are already handled explicitly above, fixed and enums not yet supported.
+	if !isOpt && (result.Type == "record" || result.Type == "map" || result.Type == "array") {
+		return []*AvroSchema{{Name: n, Type: ret}}
+	}
+
 	// the rest is single schema
 	result.Name = n
 	return []*AvroSchema{result}
 }
 
 func (r *Reflector) ReflectFromType(v any) (string, error) {
+	// currently everything flows through here so (re)init record cache
+	r.recordTypeCache = make(map[string]reflect.Type)
+
 	t := reflect.TypeOf(v)
 
 	if t.Kind() == reflect.Ptr {

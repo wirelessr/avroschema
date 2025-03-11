@@ -29,7 +29,7 @@ func TestMgmCommonTypes(t *testing.T) {
 		"name": "Book",
 		"type": "record",
 		"fields": [
-			{ "name": "_id", "type": "string" },
+			{ "name": "_id", "type": ["null", "string"] },
 			{ "name": "created_at", "type": "long", "logicalType": "timestamp-millis" },
 			{ "name": "updated_at", "type": "long", "logicalType": "timestamp-millis" },
 			{ "name": "name", "type": "string" },
@@ -37,7 +37,7 @@ func TestMgmCommonTypes(t *testing.T) {
 			{ "name": "obj_id", "type": "string" },
 			{ "name": "arrived_at", "type": "long", "logicalType": "timestamp-millis" },
 			{ "name": "ref_data", "type": "string" },
-			{ "name": "author", "type": "array", "items": "string" } 
+			{ "name": "author", "type": { "type": "array", "items": "string" }}
 		]
 	}`
 
