@@ -618,3 +618,46 @@ func TestGoEmitAllFieldsGoNaming(t *testing.T) {
 	assert.Nil(t, err)
 	assert.JSONEq(t, expected, r)
 }
+
+func TestNamespace(t *testing.T) {
+	type Address struct {
+		Street  string `json:"street"`
+		City    string `json:"city"`
+		Country string `json:"country"`
+	}
+
+	type Person struct {
+		Name    string  `json:"name"`
+		Age     int     `json:"age"`
+		Address Address `json:"address"`
+	}
+
+	expected := `{
+		"name": "Person",
+		"type": "record",
+		"namespace": "com.example",
+		"fields": [
+			{"name": "name", "type": "string"},
+			{"name": "age", "type": "int"},
+			{"name": "address", "type": {
+				"name": "Address",
+				"type": "record",
+				"namespace": "com.example",
+				"fields": [
+					{"name": "street", "type": "string"},
+					{"name": "city", "type": "string"},
+					{"name": "country", "type": "string"}
+				]
+			}}
+		]
+	}`
+
+	p := Person{}
+	r := &Reflector{
+		Namespace: "com.example",
+	}
+	result, err := r.Reflect(p)
+
+	assert.Nil(t, err)
+	assert.JSONEq(t, expected, result)
+}
