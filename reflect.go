@@ -16,6 +16,7 @@ type Reflector struct {
 	EmitAllFields        bool // don't skip struct fields which have no struct tags
 	SkipTagFieldNames    bool // don't use json/bson tag names, even if theyre present
 	Mapper               func(reflect.Type) any
+	NameMapping          map[string]string // 改用 map
 	Namespace            string
 	recordTypeCache      map[string]reflect.Type
 }
@@ -82,6 +83,12 @@ func (r *Reflector) handleRecord(t reflect.Type) *AvroSchema {
 	name := t.Name()
 	tokens := strings.Split(name, ".")
 	name = tokens[len(tokens)-1]
+
+	if r.NameMapping != nil {
+		if mappedName, ok := r.NameMapping[name]; ok {
+			name = mappedName
+		}
+	}
 
 	if _, ok := r.recordTypeCache[t.Name()]; ok {
 		return &AvroSchema{Name: name, Type: t.Name()}
