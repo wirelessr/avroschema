@@ -661,3 +661,30 @@ func TestNamespace(t *testing.T) {
 	assert.Nil(t, err)
 	assert.JSONEq(t, expected, result)
 }
+
+func TestNameMapping(t *testing.T) {
+	type MyStruct struct {
+		Field string `json:"field"`
+	}
+
+	expected := `{
+		"name": "CustomName",
+		"type": "record",
+		"namespace": "com.example",
+		"fields": [
+			{"name": "field", "type": "string"}
+		]
+	}`
+
+	e := MyStruct{}
+	r := &Reflector{
+		Namespace: "com.example",
+		NameMapping: map[string]string{
+			"MyStruct": "CustomName",
+		},
+	}
+	result, err := r.Reflect(e)
+
+	assert.Nil(t, err)
+	assert.JSONEq(t, expected, result)
+}
