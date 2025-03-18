@@ -16,7 +16,7 @@ type Reflector struct {
 	EmitAllFields        bool // don't skip struct fields which have no struct tags
 	SkipTagFieldNames    bool // don't use json/bson tag names, even if theyre present
 	Mapper               func(reflect.Type) any
-	NameMapping          map[string]string // 改用 map
+	NameMapping          map[string]string // override record's name
 	Namespace            string
 	recordTypeCache      map[string]reflect.Type
 }
