@@ -30,21 +30,136 @@ avroschema.Reflect(&Entity{})
 
 ```json
 {
-    "name": "Entity",
-    "type": "record",
-    "fields": [
-      {"name": "a_str_field", "type": "string"},
-      {"name": "a_int_field", "type": "int"},
-      {"name": "a_bool_field", "type": "boolean"},
-      {"name": "a_float_field", "type": "float"},
-      {"name": "a_double_field", "type": "double"}
-    ]
-  }
+  "name": "Entity",
+  "type": "record",
+  "fields": [
+    { "name": "a_str_field", "type": "string" },
+    { "name": "a_int_field", "type": "int" },
+    { "name": "a_bool_field", "type": "boolean" },
+    { "name": "a_float_field", "type": "float" },
+    { "name": "a_double_field", "type": "double" }
+  ]
+}
 ```
 
-## More Advanced Extensions
+## Advanced Configuration
 
-The popular MongoDB ORM, [mgm](https://github.com/Kamva/mgm), is supported.
+The `Reflector` struct provides several configuration options:
+
+```go
+reflector := &avroschema.Reflector{
+    BeBackwardTransitive: true,  // Make all fields optional
+    EmitAllFields:        true,  // Include fields without tags
+    SkipTagFieldNames:    false, // Use JSON/BSON tag names
+    Mapper:               nil,   // Custom type mapper
+    NameMapping:          nil,   // Custom name mapping
+    Namespace:           "",     // Schema namespace
+}
+```
+
+## Handling Nested Structures
+
+The package supports nested structs and arrays:
+
+```go
+type Address struct {
+    Street string `json:"street"`
+    City   string `json:"city"`
+}
+
+type Person struct {
+    Name    string   `json:"name"`
+    Age     int      `json:"age"`
+    Address Address  `json:"address"`
+    Emails  []string `json:"emails"`
+}
+```
+
+Resulting schema:
+
+```json
+{
+  "name": "Person",
+  "type": "record",
+  "fields": [
+    { "name": "name", "type": "string" },
+    { "name": "age", "type": "int" },
+    {
+      "name": "address",
+      "type": {
+        "name": "Address",
+        "type": "record",
+        "fields": [
+          { "name": "street", "type": "string" },
+          { "name": "city", "type": "string" }
+        ]
+      }
+    },
+    { "name": "emails", "type": { "type": "array", "items": "string" } }
+  ]
+}
+```
+
+## Time Handling
+
+Time values are automatically converted to timestamp-millis:
+
+```go
+type Event struct {
+    ID        string    `json:"id"`
+    Timestamp time.Time `json:"timestamp"`
+}
+```
+
+```json
+{
+  "name": "Event",
+  "type": "record",
+  "fields": [
+    { "name": "id", "type": "string" },
+    { "name": "timestamp", "type": "long", "logicalType": "timestamp-millis" }
+  ]
+}
+```
+
+## Custom Type Mapping
+
+You can implement custom type mapping:
+
+```go
+reflector.Mapper = func(t reflect.Type) any {
+    if t == reflect.TypeOf(primitive.ObjectID{}) {
+        return "string"
+    }
+    return nil // fall back to default mapping
+}
+```
+
+## Optional Fields
+
+Mark fields as optional with `,omitempty`:
+
+```go
+type User struct {
+    Username string  `json:"username"`
+    Email    *string `json:"email,omitempty"`
+}
+```
+
+```json
+{
+  "name": "User",
+  "type": "record",
+  "fields": [
+    { "name": "username", "type": "string" },
+    { "name": "email", "type": ["null", "string"] }
+  ]
+}
+```
+
+## MongoDB ORM (mgm) Support
+
+The popular MongoDB ORM, [mgm](https://github.com/Kamva/mgm), is supported:
 
 The following Go type:
 
@@ -78,18 +193,18 @@ Results in following JSON Schema:
 
 ```json
 {
-		"name": "Book",
-		"type": "record",
-		"fields": [
-			{ "name": "_id", "type": "string" },
-			{ "name": "created_at", "type": "long", "logicalType": "timestamp-millis" },
-			{ "name": "updated_at", "type": "long", "logicalType": "timestamp-millis" },
-			{ "name": "name", "type": "string" },
-			{ "name": "pages", "type": "int" },
-			{ "name": "obj_id", "type": "string" },
-			{ "name": "arrived_at", "type": "long", "logicalType": "timestamp-millis" },
-			{ "name": "ref_data", "type": "string" },
-			{ "name": "author", "type": "array", "items": "string" } 
-		]
-	}
+  "name": "Book",
+  "type": "record",
+  "fields": [
+    { "name": "_id", "type": "string" },
+    { "name": "created_at", "type": "long", "logicalType": "timestamp-millis" },
+    { "name": "updated_at", "type": "long", "logicalType": "timestamp-millis" },
+    { "name": "name", "type": "string" },
+    { "name": "pages", "type": "int" },
+    { "name": "obj_id", "type": "string" },
+    { "name": "arrived_at", "type": "long", "logicalType": "timestamp-millis" },
+    { "name": "ref_data", "type": "string" },
+    { "name": "author", "type": "array", "items": "string" }
+  ]
+}
 ```
